@@ -66,8 +66,8 @@ SlingService.prototype.getNode = function(path, callback) {
     if(_(absolutePath).endsWith("/")) {
         absolutePath = absolutePath.substring(0, absolutePath.length - 1);    
     }
-
-    $.ajax({
+	
+    SlingUtils.ajax({
         url: absolutePath + ".infinity.json",
         dataType: "json",
 
@@ -645,24 +645,33 @@ var SlingUtils = function() {
 
 	/**
 	 * Handler for generating HTTPRequests
-	 * param name {String} url The url to make a request from
-	 * param name {Object} statusHandlers The collection of handlers for different status responses. Structure matches the status code of the request to functions (e.g. "200":function(){ … })
-	 * returns {Object} The httpObject used in the request
 	 */
-	function httpRequest(url, statusHandlers) {
+	function ajax(params) {
 		var request = makeHttpObject();
-		request.open("GET", url, true);
+		request.open("GET", params.url, true);
 		request.send(null);
 		request.onreadystatechange = function() {
 		if (request.readyState == 4) {
-			var handler = handlers[request.status];
-			if(typeof handler == "function") {
-				handler(request);
+			var handler = params.statusCodes[request.status];
+			if(typeof handler != "function") {
+				handler = (request.status == 200) ? params["success"] : params["error"];
+			}
+			
+			if(typeof handler == "function")
+				if(request.status >= 200 && request.status < 300) {
+					var response = request.responseText;
+					if(params.dataType.toLowerCase() == "json") {
+						response = eval(response);
+					}
+					handler(response);
+				} else {
+					handler(request);
+				}
 			}
 		};
 	}
 
 	return {
-		httpRequest: httpRequest
+		ajax: ajax
 	}
 }();
