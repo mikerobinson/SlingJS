@@ -80,9 +80,9 @@ SlingService.prototype.getNode = function(path, callback) {
             },
             300: function(response) {
                 // JCR limit reached, array of JSON files returned
-                var responseJSON = $.parseJSON(response.responseText);
+                var responseJSON = eval(response.responseText);
 
-                $.ajax({
+                SlingUtils.ajax({
                     url: responseJSON[0],
                     dataType: "json",
                     success: function(response) {
@@ -191,15 +191,20 @@ SlingService.prototype.createNode = function(path, properties, callback) {
 SlingService.prototype.nodeAction = function(path, actions, callback) {
     var data = this._makePost(actions);
 
-    $.ajax({
+    SlingUtils.ajax({
         url: this._makePath(path),
         data: data,
         type: 'POST',
-        complete: function(response) {
+        success: function(response) {
             if(_(callback).isFunction()) {
                 callback(response);
             }
-        }
+        },
+	   error: function(response) {
+            if(_(callback).isFunction()) {
+                callback(response);
+            }
+	   }
     });
 };
 
@@ -521,7 +526,7 @@ SlingNode.prototype.getNodes = function() {
  * @param [callback] {Function(status)} Function that returns a post status.
  */
 SlingNode.prototype.save = function(callback) {
-    $.ajax({
+    SlingUtils.ajax({
         url: this.path,
         data: this.serialize(),
         type: 'POST',
@@ -648,11 +653,13 @@ var SlingUtils = function() {
 	 */
 	function ajax(params) {
 		var request = makeHttpObject();
-		request.open("GET", params.url, true);
+
+		var type = (params.type != null) ? params.type || "GET";
+		request.open(type, params.url, true);
 		request.send(null);
 		request.onreadystatechange = function() {
 		if (request.readyState == 4) {
-			var handler = params.statusCodes[request.status];
+			var handler = params.statusCode[request.status];
 			if(typeof handler != "function") {
 				handler = (request.status == 200) ? params["success"] : params["error"];
 			}
