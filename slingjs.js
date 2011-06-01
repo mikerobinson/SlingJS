@@ -622,3 +622,47 @@ SlingProperty.prototype.getValue = function() {
 SlingProperty.prototype.getTypeHint = function() {
     return this.typeHint;
 };
+
+
+/**
+ * Utility functions
+ */
+var SlingUtils = function() {
+	/**
+	 * Private function for generating an HTTPRequest in different browsers.
+	 * Borrowed from: http://eloquentjavascript.net/chapter14.html
+	 */
+	function makeHttpObject() {
+		try {return new XMLHttpRequest();}
+		catch (error) {}
+		try {return new ActiveXObject("Msxml2.XMLHTTP");}
+		catch (error) {}
+		try {return new ActiveXObject("Microsoft.XMLHTTP");}
+		catch (error) {}
+
+		throw new Error("Could not create HTTP request object.");
+	}
+
+	/**
+	 * Handler for generating HTTPRequests
+	 * param name {String} url The url to make a request from
+	 * param name {Object} statusHandlers The collection of handlers for different status responses. Structure matches the status code of the request to functions (e.g. "200":function(){ … })
+	 * returns {Object} The httpObject used in the request
+	 */
+	function httpRequest(url, statusHandlers) {
+		var request = makeHttpObject();
+		request.open("GET", url, true);
+		request.send(null);
+		request.onreadystatechange = function() {
+		if (request.readyState == 4) {
+			var handler = handlers[request.status];
+			if(typeof handler == "function") {
+				handler(request);
+			}
+		};
+	}
+
+	return {
+		httpRequest: httpRequest
+	}
+}();
