@@ -66,7 +66,7 @@ SlingService.prototype.getNode = function(path, callback) {
     if(_(absolutePath).endsWith("/")) {
         absolutePath = absolutePath.substring(0, absolutePath.length - 1);    
     }
-	
+    
     SlingUtils.ajax({
         url: absolutePath + ".infinity.json",
         dataType: "json",
@@ -80,7 +80,7 @@ SlingService.prototype.getNode = function(path, callback) {
             },
             300: function(response) {
                 // JCR limit reached, array of JSON files returned
-                var responseJSON = eval(response.responseText);
+                var responseJSON = eval(response.responseText); // Convert string array to regular array
 
                 SlingUtils.ajax({
                     url: responseJSON[0],
@@ -200,11 +200,11 @@ SlingService.prototype.nodeAction = function(path, actions, callback) {
                 callback(response);
             }
         },
-	   error: function(response) {
+       error: function(response) {
             if(_(callback).isFunction()) {
                 callback(response);
             }
-	   }
+       }
     });
 };
 
@@ -633,52 +633,56 @@ SlingProperty.prototype.getTypeHint = function() {
  * Utility functions
  */
 var SlingUtils = function() {
-	/**
-	 * Private function for generating an HTTPRequest in different browsers.
-	 * Borrowed from: http://eloquentjavascript.net/chapter14.html
-	 */
-	function makeHttpObject() {
-		try {return new XMLHttpRequest();}
-		catch (error) {}
-		try {return new ActiveXObject("Msxml2.XMLHTTP");}
-		catch (error) {}
-		try {return new ActiveXObject("Microsoft.XMLHTTP");}
-		catch (error) {}
+    /**
+     * Private function for generating an HTTPRequest in different browsers.
+     * Borrowed from: http://eloquentjavascript.net/chapter14.html
+     */
+    function makeHttpObject() {
+        try {return new XMLHttpRequest()}
+        catch (error) {}
+        try {return new ActiveXObject("Msxml2.XMLHTTP")}
+        catch (error) {}
+        try {return new ActiveXObject("Microsoft.XMLHTTP")}
+        catch (error) {}
 
-		throw new Error("Could not create HTTP request object.");
-	}
+        throw new Error("Could not create HTTP request object.");
+    }
 
-	/**
-	 * Handler for generating HTTPRequests
-	 */
-	function ajax(params) {
-		var request = makeHttpObject();
+    /**
+     * Handler for generating HTTPRequests
+     */
+    function ajax(params) {
+        var request = makeHttpObject();
 
-		var type = (params.type != null) ? params.type || "GET";
-		request.open(type, params.url, true);
-		request.send(null);
-		request.onreadystatechange = function() {
-		if (request.readyState == 4) {
-			var handler = params.statusCode[request.status];
-			if(typeof handler != "function") {
-				handler = (request.status == 200) ? params["success"] : params["error"];
-			}
-			
-			if(typeof handler == "function")
-				if(request.status >= 200 && request.status < 300) {
-					var response = request.responseText;
-					if(params.dataType.toLowerCase() == "json") {
-						response = eval(response);
-					}
-					handler(response);
-				} else {
-					handler(request);
-				}
-			}
-		};
-	}
+        var type = (params.type != null) ? params.type : "GET";
+        request.open(type, params.url, true);
+        request.send(null);
+        request.onreadystatechange = function() {
+            if (request.readyState == 4) {            
+                var handler = null;
+                if(_(params.statusCode).hasValue()) {
+                    var handler = params["statusCode"][request.status];
+                }
+                if(!_(handler).hasValue()) {
+                    handler = (request.status == 200) ? params["success"] : params["error"];
+                }
+                
+                if(_(handler).isFunction()) {
+                    if(request.status >= 200 && request.status < 300) {
+                        var response = request.responseText;
+                        if(params.dataType.toLowerCase() == "json") {
+                            response = eval("(" + response + ")");
+                        }
+                        handler(response);
+                    } else {
+                        handler(request);
+                    }
+                }
+            }
+        }
+    }
 
-	return {
-		ajax: ajax
-	}
+    return {
+        ajax: ajax
+    }
 }();
