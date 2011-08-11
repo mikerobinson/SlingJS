@@ -178,6 +178,7 @@ SlingService.prototype._checkNodeForProperty = function(list, node, name, value)
 SlingService.prototype.createNode = function(path, properties, callback) {
     var absolutePath = this._makePath(path);
     var node = new SlingNode(absolutePath, properties);
+    
     node.save(callback);
 };
 
@@ -417,7 +418,6 @@ SlingService.prototype._makePost = function(actions) {
         }
     }
 
-    post.push(":http-equiv-accept=application/json,*/*;q=0.9");
 
     return post.join("&");
 };
@@ -589,8 +589,6 @@ SlingNode.prototype.serialize = function() {
         }
     }
 
-    data.push(":http-equiv-accept=application/json,*/*;q=0.9");
-
     return data.join("&");
 };
 
@@ -656,7 +654,21 @@ var SlingUtils = function() {
 
         var type = (params.type != null) ? params.type : "GET";
         request.open(type, params.url, true);
-        request.send(null);
+        if(type == "GET") {
+        	request.send(null);
+        } else {
+        	// set the necessary request headers
+		    request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		    if(params.data != null) {
+		    	request.setRequestHeader("Content-length", params.data.length);	
+		    } else {
+		    	request.setRequestHeader("Content-length", 0);
+		    }
+			
+			request.setRequestHeader("Connection", "close");  
+        	request.send(params.data);
+        }
+        
         request.onreadystatechange = function() {
             if (request.readyState == 4) {            
                 var handler = null;
@@ -670,7 +682,7 @@ var SlingUtils = function() {
                 if(_(handler).isFunction()) {
                     if(request.status >= 200 && request.status < 300) {
                         var response = request.responseText;
-                        if(params.dataType.toLowerCase() == "json") {
+                        if(params.dataType && params.dataType.toLowerCase() == "json") {
                             response = eval("(" + response + ")");
                         }
                         handler(response);
