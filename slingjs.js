@@ -129,7 +129,6 @@ SlingService.prototype.getNodesByProperty = function(name, value, callback) {
     var that = this;
     var nodes = [];
 
-
     // Assume name and callback
     if(arguments.length == 2) {
         callback = value;
@@ -137,8 +136,7 @@ SlingService.prototype.getNodesByProperty = function(name, value, callback) {
     }
         
     this.getCurrentNode(function(s, node) {
-
-        if(s.status == 200) {
+        if(s.status == 200 || node) {
             that._checkNodeForProperty(nodes, node, name, value);
             if(_(callback).isFunction()) {
                 callback(s, nodes);
@@ -179,7 +177,10 @@ SlingService.prototype.createNode = function(path, properties, callback) {
     var absolutePath = this._makePath(path);
     var node = new SlingNode(absolutePath, properties);
     
-    node.save(callback);
+    var that = this;
+    node.save(function(status) {
+        that.getNode(absolutePath, callback);   
+    });
 };
 
 
@@ -435,7 +436,7 @@ function SlingNode(path, properties) {
     this.name = _(path.split("/")).last();
     this.properties = {};
     this.nodes = [];
-    this.ignoreProperties = ["jcr:uuid", "jcr:created", "jcr:predecessors", "jcr:createdBy", "jcr:mixinTypes", "jcr:baseVersion", "jcr:primaryType", "jcr:versionHistory", "jcr:versionHistory"];
+    this.ignoreProperties = ["jcr:uuid", "jcr:created", "jcr:predecessors", "jcr:createdBy", "jcr:mixinTypes", "jcr:baseVersion", "jcr:versionHistory", "jcr:versionHistory"];
 
     if(_(properties).hasValue()) {
         for(var i in properties) {
@@ -477,6 +478,16 @@ SlingNode.prototype.getProperties = function() {
     return this.properties;
 };
 
+/**
+ * @returns {Object} A key / value collection of properties and their values
+ */
+SlingNode.prototype.getValues = function() {
+    var values = {};
+    for(var i in this.properties) {
+        values[i] = this.properties[i].getValue();
+    }
+    return values;
+}
 
 /**
  * @param name The name of the property
@@ -526,6 +537,8 @@ SlingNode.prototype.getNodes = function() {
  * @param [callback] {Function(status)} Function that returns a post status.
  */
 SlingNode.prototype.save = function(callback) {
+    var that = this;
+    
     SlingUtils.ajax({
         url: this.path,
         data: this.serialize(),
@@ -592,6 +605,23 @@ SlingNode.prototype.serialize = function() {
     return data.join("&");
 };
 
+/**
+ * Shorthand function for setting and retrieving attribute values
+ * @param name {String} The name of the property
+ * @param value {String|String[]|Number|Number[]|Boolean|Boolean[]} The value of the property
+ */
+SlingNode.prototype.val = function(name, value) {
+    if(typeof value == "undefined") {
+        // GET
+        var property = this.getProperty(name);
+        if(property != null) {
+            return property.getValue();             
+        }
+    } else {
+        // SET
+        this.setProperty(name, value);
+    }
+}
 
 /**
  * Creates a new SlingAttribute. If the value passed is an array, automatically assigns a Sling TypeHint to the attribute.
@@ -655,18 +685,18 @@ var SlingUtils = function() {
         var type = (params.type != null) ? params.type : "GET";
         request.open(type, params.url, true);
         if(type == "GET") {
-        	request.send(null);
+            request.send(null);
         } else {
-        	// set the necessary request headers
-		    request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-		    if(params.data != null) {
-		    	request.setRequestHeader("Content-length", params.data.length);	
-		    } else {
-		    	request.setRequestHeader("Content-length", 0);
-		    }
-			
-			request.setRequestHeader("Connection", "close");  
-        	request.send(params.data);
+            // set the necessary request headers
+            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            if(params.data != null) {
+                request.setRequestHeader("Content-length", params.data.length); 
+            } else {
+                request.setRequestHeader("Content-length", 0);
+            }
+            
+            request.setRequestHeader("Connection", "close");  
+            request.send(params.data);
         }
         
         request.onreadystatechange = function() {
