@@ -1,0 +1,42 @@
+SlingService([path])
+ setPath
+ getPath
+ getCurrentPath
+ getCurrentNode
+ getNode(path)
+ getNodesByProperty(key[, value])
+ createNode(path, object)
+
+ copyValue
+ copyValues
+ moveValue
+ moveValues
+ deleteValue
+ deleteValues
+ importValues*
+ orderNodeFirst
+ orderNodeLast
+ orderNodeBefore
+ orderNodeAfter
+ orderNodeAt
+
+SlingNode(path, properties)
+ getName
+ getPath
+ setPath(path)
+ getProperties
+ getValues
+ hasProperty(name[, value])
+ getProperty(name)
+ setProperty(name, value)
+ getNodes
+ save
+ toJSON
+ serialize
+ val(name[, value])
+
+SlingProperty(path, name, value)
+ getPath
+ getName
+ getValue
+ getTypeHint
